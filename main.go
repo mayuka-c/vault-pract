@@ -37,7 +37,7 @@ func readDBSecrets() {
 func main() {
 	readDBSecrets()
 
-	vaultLib := os.Getenv("VAULT_CLIENT")
+	vaultLib := os.Getenv("VAULT_LIB")
 	var err error
 
 	if vaultLib == "vaultLib" {
