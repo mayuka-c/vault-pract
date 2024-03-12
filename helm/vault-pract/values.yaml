@@ -80,3 +80,8 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+vault:
+  address: http://vault:8200
+  role: vault-pract-app
+  lib: vaultLib

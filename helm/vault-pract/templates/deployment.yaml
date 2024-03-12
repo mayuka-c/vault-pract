@@ -15,10 +15,10 @@ spec:
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/agent-inject-status: "update"
         vault.hashicorp.com/agent-init-first: "true"
-        vault.hashicorp.com/agent-inject-secret-database: "secret/data/database"
-        vault.hashicorp.com/role: "test-app"
-        vault.hashicorp.com/agent-inject-template-database: |
-          {{`{{- with secret "secret/data/database" -}}
+        vault.hashicorp.com/agent-inject-secret-cassandra: "ccp/dpce/infra/data/cassandra/t"
+        vault.hashicorp.com/role: "vault-pract-app"
+        vault.hashicorp.com/agent-inject-template-cassandra: |
+          {{`{{- with secret "ccp/dpce/infra/data/cassandra/t" -}}
           {
             "username" : "{{ .Data.data.username }}",
             "password" : "{{ .Data.data.password }}"
@@ -50,6 +50,13 @@ spec:
             httpGet:
               path: /
               port: http
+          env:
+            - name: VAULT_ADDR
+              value: {{ .Values.vault.address | quote }}
+            - name: VAULT_ROLE
+              value: {{ .Values.vault.role | quote }}
+            - name: VAULT_LIB
+              value: {{ .Values.vault.lib | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

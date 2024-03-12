@@ -5,17 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 
-	"github.com/hashicorp/vault-client-go"
-	"github.com/hashicorp/vault-client-go/schema"
+	vaultclientgo "github.com/mayuka-c/vault-pract/vault-client-go"
+	"github.com/mayuka-c/vault-pract/vaultLib"
 )
 
 var (
 	ctx = context.Background()
 )
 
-const secretFile = "/vault/secrets/database"
+const secretFile = "/vault/secrets/cassandra"
 
 type DB struct {
 	Username string `json:"username"`
@@ -35,65 +34,58 @@ func readDBSecrets() {
 	fmt.Printf("DB struct: %+v\n", db)
 }
 
-func fetchServiceAccountToken() string {
-	serviceAccountTokenPath := "/var/run/secrets/kubernetes.io/serviceaccount/token"
-
-	fileBytes, err := os.ReadFile(serviceAccountTokenPath)
-	if err != nil {
-		fmt.Println(err)
-		return ""
-	}
-
-	fmt.Println(string(fileBytes))
-	return string(fileBytes)
-}
-
 func main() {
 	readDBSecrets()
-	// prepare a client with the given base address
-	client, err := vault.New(
-		vault.WithAddress("http://vault:8200"),
-		vault.WithRequestTimeout(30*time.Second),
-	)
+
+	vaultLib := os.Getenv("VAULT_CLIENT")
+	var err error
+
+	if vaultLib == "vaultLib" {
+		err = useVault()
+	} else {
+		err = useVaultClientGo()
+	}
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
+}
 
-	fmt.Println("client successfully created")
-
-	jwt := fetchServiceAccountToken()
-
-	resp, err := client.Auth.KubernetesLogin(context.Background(), schema.KubernetesLoginRequest{
-		Jwt:  jwt,
-		Role: "test-app",
-	})
+func useVault() error {
+	fmt.Println("Use Vault Lib")
+	vault, err := vaultLib.NewClient()
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
-	if err := client.SetToken(resp.Auth.ClientToken); err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	_, err = client.Write(ctx, "app/secret/agena/s1", map[string]any{
-		"data": map[string]any{
-			"master_tenant_password": "abc123",
-			"custom_sso_encKey":      "pass-1",
-		},
-	})
+	err = vault.Write(ctx)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
-	readResp, err := client.Read(ctx, "app/secret/agena/s1")
+	err = vault.Read(ctx)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
-	fmt.Printf("read response: %+v\n", readResp.Data)
+	return nil
+}
+
+func useVaultClientGo() error {
+	fmt.Println("Use Vault Client Go")
+	vault, err := vaultclientgo.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = vault.Write(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = vault.Read(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
